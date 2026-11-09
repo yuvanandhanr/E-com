@@ -1,0 +1,25 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install openssl and libc6-compat needed for Prisma on Alpine
+RUN apk add --no-cache openssl libc6-compat
+
+# Copy dependency manifests first
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies and generate prisma client
+RUN npm install
+RUN npx prisma generate
+
+# Copy the rest of the application code
+COPY . .
+
+ENV WATCHPACK_POLLING=true
+ENV PORT=3000
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+

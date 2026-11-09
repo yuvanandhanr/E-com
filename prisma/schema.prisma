@@ -1,0 +1,198 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  INSPECTION_AGENT
+}
+
+enum ProductCondition {
+  BRAND_NEW
+  OPEN_BOX
+  REFURBISHED_EXCELLENT
+  REFURBISHED_GOOD
+  REFURBISHED_FAIR
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum TradeInStatus {
+  VALUATION_QUOTED
+  PICKUP_SCHEDULED
+  RECEIVED_AT_FACILITY
+  INSPECTING
+  OFFER_ACCEPTED
+  COUNTER_OFFER_MADE
+  REJECTED_RETURNED
+  PAYOUT_PROCESSED
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  phone        String?
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole          @default(CUSTOMER)
+  addresses    Address[]
+  orders       Order[]
+  tradeIns     TradeInRequest[]
+  inspections  TradeInInspection[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName    String
+  phone       String
+  streetLine1 String
+  streetLine2 String?
+  city        String
+  state       String
+  postalCode  String
+  country     String   @default("India")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  imageUrl  String?
+  products  Product[]
+  createdAt DateTime   @default(now())
+}
+
+model Brand {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  slug      String     @unique
+  logoUrl   String?
+  products  Product[]
+}
+
+model Product {
+  id              String           @id @default(uuid())
+  name            String
+  slug            String           @unique
+  description     String
+  categoryId      String
+  category        Category         @relation(fields: [categoryId], references: [id])
+  brandId         String
+  brand           Brand            @relation(fields: [brandId], references: [id])
+  baseSpecs       Json?            @default("{}")
+  compatibility   String[]         @default([]) // e.g. ["MacBook Pro M1/M2/M3", "iPhone 15/16", "USB-C PD"]
+  isFeatured      Boolean          @default(false)
+  variants        ProductVariant[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ProductVariant {
+  id              String           @id @default(uuid())
+  productId       String
+  product         Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku             String           @unique
+  title           String
+  condition       ProductCondition @default(BRAND_NEW)
+  price           Float
+  compareAtPrice  Float?
+  stock           Int              @default(10)
+  attributes      Json             @default("{}") // e.g. {"color": "Space Black", "storage": "256GB"}
+  images          String[]         @default([])
+  isSerialized    Boolean          @default(false)
+  orderItems      OrderItem[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Order {
+  id                 String       @id @default(uuid())
+  orderNumber        String       @unique
+  userId             String?
+  user               User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status             OrderStatus  @default(CONFIRMED)
+  subtotal           Float
+  discountAmount     Float        @default(0)
+  shippingFee        Float        @default(0)
+  totalAmount        Float
+  shippingAddress    Json
+  trackingNumber     String?
+  courierPartner     String?
+  paymentMethod      String       @default("CARD") // CARD, UPI, COD, STORE_CREDIT
+  paymentStatus      String       @default("PAID") // PENDING, PAID, FAILED
+  items              OrderItem[]
+  timeline           Json?        @default("[]") // Event logs with timestamps
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model OrderItem {
+  id              String         @id @default(uuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  quantity        Int            @default(1)
+  unitPrice       Float
+  totalPrice      Float
+  variantSnapshot Json?
+}
+
+model TradeInRequest {
+  id                   String              @id @default(uuid())
+  requestNumber        String              @unique
+  userId               String?
+  user                 User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceType           String              // SMARTPHONE, LAPTOP, ACCESSORY
+  brand                String
+  modelName            String
+  declaredSpecs        Json                // {"storage": "256GB", "battery": ">85%"}
+  conditionAnswers     Json                // {"screenCracked": false, "turnsOn": true}
+  initialQuotedPrice   Float
+  finalOfferedPrice    Float?
+  status               TradeInStatus       @default(VALUATION_QUOTED)
+  pickupAddress        Json?
+  payoutMethod         String?             // UPI, BANK_TRANSFER, STORE_CREDIT
+  payoutDetails        Json?
+  inspection           TradeInInspection?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+}
+
+model TradeInInspection {
+  id                   String           @id @default(uuid())
+  tradeInRequestId     String           @unique
+  tradeInRequest       TradeInRequest   @relation(fields: [tradeInRequestId], references: [id], onDelete: Cascade)
+  inspectorId          String?
+  inspector            User?            @relation(fields: [inspectorId], references: [id], onDelete: SetNull)
+  serialOrImei         String?
+  screenPassed         Boolean          @default(true)
+  bodyPassed           Boolean          @default(true)
+  batteryHealth        Int?
+  functionalTests      Json?            @default("{}")
+  assignedGrade        ProductCondition @default(REFURBISHED_EXCELLENT)
+  notes                String?
+  inspectionPhotos     String[]         @default([])
+  inspectedAt          DateTime         @default(now())
+}
