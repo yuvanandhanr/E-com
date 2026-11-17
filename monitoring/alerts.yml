@@ -1,0 +1,52 @@
+groups:
+  - name: ecommerce_critical_alerts
+    rules:
+      # 1. PostgreSQL Database Outage
+      - alert: DatabaseServiceDown
+        expr: (pg_up == 0) or (absent(pg_up) == 1) or (up{job="postgres"} == 0)
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL Database is DOWN"
+          description: "PostgreSQL database server is unreachable. Checkout orders, auth, and catalog transactions cannot process."
+
+      # 2. Redis Cache Outage
+      - alert: RedisCacheDown
+        expr: (redis_up == 0) or (absent(redis_up) == 1) or (up{job="redis"} == 0)
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis Cache is DOWN"
+          description: "Redis server is unreachable. Caching and session operations are degraded."
+
+      # 3. HTTP 5xx Server Errors (Crash Spike)
+      - alert: HighHttpErrorRate
+        expr: sum(rate(nexus_http_requests_total{status=~"5.."}[1m])) > 0
+        for: 5s
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx Server Crash Spike Detected"
+          description: "Active HTTP 500 internal server exceptions are occurring on storefront API endpoints."
+
+      # 4. Tail Latency Spike (p99 > 1.0s)
+      - alert: HighP99TailLatency
+        expr: histogram_quantile(0.99, sum by (le) (rate(nexus_http_request_duration_seconds_bucket[1m]))) > 1.0
+        for: 5s
+        labels:
+          severity: warning
+        annotations:
+          summary: "API Tail Latency Spike (p99 > 1.0s)"
+          description: "99th percentile response time exceeded 1.0 second. User experience degraded."
+
+      # 5. High Memory Usage Alert
+      - alert: MemoryLeakSpike
+        expr: nexus_process_heap_used_bytes > 400000000
+        for: 10s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Node.js Heap Memory"
+          description: "Application heap memory is approaching container safety limits."

@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingBag, Search, User, LogOut, Shield, ArrowRightLeft, Menu, X, Package } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Shield, ArrowRightLeft, Menu, X, Package, Heart } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
+import { GlobalSearchModal } from './GlobalSearchModal';
 
 interface CurrentUser {
   id: string;
@@ -20,7 +21,6 @@ export default function Navbar() {
   const { totalItems } = useCart();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -38,24 +38,17 @@ export default function Navbar() {
     router.refresh();
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md">
-      {/* Top Notification Announcement Bar */}
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
+      {/* Top Announcement Bar */}
       <div className="bg-slate-900 px-4 py-1.5 text-center text-xs font-medium text-slate-200 flex items-center justify-center gap-3">
-        <span>🚀 <strong>Exchange Bonus:</strong> Get extra 10% cash value when trading in towards any Laptop Accessory!</span>
-        <Link href="/sell" className="underline hover:text-white">Estimate Value &rarr;</Link>
+        <span>🚀 <strong>Special Offer:</strong> Use code <span className="text-emerald-400 font-bold">WELCOME10</span> for 10% off &amp; <span className="text-emerald-400 font-bold">NEXUS500</span> on orders over ₹4,000!</span>
+        <Link href="/sell" className="underline hover:text-white">Trade-In Device &rarr;</Link>
       </div>
 
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8 gap-4">
         {/* Brand Logo */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white font-extrabold text-xl shadow-md">
               N
@@ -67,12 +60,10 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-700">
+          <nav className="hidden lg:flex items-center gap-5 text-xs font-semibold text-slate-700">
             <Link
               href="/catalog"
-              className={`transition-colors hover:text-indigo-600 ${
-                pathname === '/catalog' ? 'text-indigo-600' : ''
-              }`}
+              className={`transition-colors hover:text-indigo-600 ${pathname === '/catalog' ? 'text-indigo-600' : ''}`}
             >
               All Products
             </Link>
@@ -80,7 +71,7 @@ export default function Navbar() {
               href="/catalog?category=smartphones"
               className="transition-colors hover:text-indigo-600"
             >
-              Mobiles
+              Smartphones
             </Link>
             <Link
               href="/catalog?category=chargers-power"
@@ -96,47 +87,51 @@ export default function Navbar() {
             </Link>
             <Link
               href="/orders"
-              className={`transition-colors hover:text-indigo-600 ${
-                pathname.startsWith('/orders') ? 'text-indigo-600' : ''
-              }`}
+              className={`transition-colors hover:text-indigo-600 ${pathname.startsWith('/orders') ? 'text-indigo-600' : ''}`}
             >
               Track Order
             </Link>
           </nav>
         </div>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="hidden lg:flex relative w-80">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search iPhone, 140W GaN, Dock..."
-            className="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-          <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-        </form>
+        {/* Global Instant Search Autocomplete */}
+        <div className="hidden md:flex flex-1 max-w-sm justify-center">
+          <GlobalSearchModal />
+        </div>
 
         {/* Right CTA / Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Sell / Trade-in Highlighted Button */}
           <Link
             href="/sell"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-semibold text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-colors shadow-sm"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-colors shadow-sm"
           >
             <ArrowRightLeft className="h-3.5 w-3.5 text-emerald-600" />
-            Sell Your Device
+            Sell Device
           </Link>
 
-          {/* User Account / Login */}
+          {/* Wishlist Button */}
+          <Link
+            href="/wishlist"
+            className="rounded-lg p-2 text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            title="Saved Wishlist"
+          >
+            <Heart className="h-5 w-5" />
+          </Link>
+
+          {/* User Account / Profile */}
           {user ? (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-bold text-slate-900">{user.firstName}</span>
-                <span className="text-[10px] uppercase font-semibold text-indigo-600 tracking-wider">
-                  {user.role}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/profile"
+                className="flex items-center gap-1.5 rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 transition-colors"
+                title="My Profile"
+              >
+                <div className="w-7 h-7 rounded-full bg-indigo-600/10 text-indigo-600 font-bold text-xs flex items-center justify-center border border-indigo-500/20">
+                  {user.firstName[0]}
+                </div>
+                <span className="hidden xl:inline text-xs font-bold text-slate-800">{user.firstName}</span>
+              </Link>
 
               {user.role === 'ADMIN' && (
                 <Link
@@ -158,10 +153,10 @@ export default function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                 title="Log out"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-4 w-4" />
               </button>
             </div>
           ) : (
@@ -208,16 +203,9 @@ export default function Navbar() {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-white px-4 py-4 space-y-3">
-          <form onSubmit={handleSearch} className="relative w-full mb-3">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-10 pr-4 text-xs font-medium focus:outline-none"
-            />
-            <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
-          </form>
+          <div className="mb-3">
+            <GlobalSearchModal />
+          </div>
 
           <Link
             href="/catalog"
@@ -227,18 +215,18 @@ export default function Navbar() {
             Catalog (All Items)
           </Link>
           <Link
-            href="/catalog?category=smartphones"
+            href="/wishlist"
             onClick={() => setMobileMenuOpen(false)}
-            className="block py-2 text-sm font-semibold text-slate-700 hover:text-indigo-600"
+            className="block py-2 text-sm font-semibold text-rose-600 hover:underline"
           >
-            Smartphones
+            My Saved Wishlist
           </Link>
           <Link
-            href="/catalog?category=chargers-power"
+            href="/profile"
             onClick={() => setMobileMenuOpen(false)}
             className="block py-2 text-sm font-semibold text-slate-700 hover:text-indigo-600"
           >
-            GaN Chargers & Accessories
+            My Account Profile
           </Link>
           <Link
             href="/sell"
@@ -259,4 +247,3 @@ export default function Navbar() {
     </header>
   );
 }
-

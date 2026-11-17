@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+rule_files:
+  - "/etc/prometheus/alerts.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  # 1. Next.js Application Metrics & Business KPIs
+  - job_name: 'nexus-app'
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['app:3000']
+
+  # 2. PostgreSQL Exporter (Active connections, queries, buffer cache, transactions)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # 3. Redis Exporter (Cache hits/misses, memory, commands/sec, client count)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # 4. Universal OpenTelemetry Collector (Exported Telemetry)
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8889']
+
+  # 5. OpenTelemetry Collector (Internal Engine Telemetry)
+  - job_name: 'otel-collector-internal'
+    static_configs:
+      - targets: ['otel-collector:8888']
+
+  # 6. Prometheus Self-Telemetry
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

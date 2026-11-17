@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Mail, ArrowRight, ShieldCheck, UserCheck } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTarget = searchParams.get('redirect') || '/catalog';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Invalid credentials');
       }
 
-      router.push(data.user.role === 'ADMIN' ? '/admin' : '/catalog');
+      const dest = data.user.role === 'ADMIN' ? '/admin' : redirectTarget;
+      router.push(dest);
       router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -57,7 +61,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      router.push(data.user.role === 'ADMIN' ? '/admin' : '/catalog');
+      const dest = data.user.role === 'ADMIN' ? '/admin' : redirectTarget;
+      router.push(dest);
       router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Demo login failed';
@@ -161,6 +166,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-400">Loading sign in...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
 

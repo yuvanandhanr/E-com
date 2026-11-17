@@ -1,0 +1,95 @@
+# =====================================================================
+# UNIVERSAL ADAPTIVE OPENTELEMETRY COLLECTOR CONFIGURATION
+# Nexus E-Commerce Enterprise Observability Gateway
+# =====================================================================
+# Your application strictly emits pure, vendor-neutral OTLP standards.
+# To route telemetry to ClickHouse, Splunk, IBM Instana, or ANY tool,
+# simply uncomment the target exporter below and add it to the pipeline.
+# =====================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # Memory safety limiter prevents container OOM under heavy traffic spikes
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+exporters:
+  # -------------------------------------------------------------------
+  # 0. LOCAL DEBUG & STANDARD PROMETHEUS (Always available out-of-the-box)
+  # -------------------------------------------------------------------
+  debug:
+    verbosity: basic
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: nexus
+
+  # -------------------------------------------------------------------
+  # 1. CLICKHOUSE STACK (Native Columnar DB for Traces, Metrics & Logs)
+  # Ultra-fast SQL analytics, SigNoz, HyperDX, or custom ClickHouse schemas
+  # -------------------------------------------------------------------
+  # clickhouse:
+  #   endpoint: tcp://${CLICKHOUSE_HOST:-clickhouse}:${CLICKHOUSE_PORT:-9000}?dial_timeout=10s&compress=lz4
+  #   database: otel
+  #   username: ${CLICKHOUSE_USER:-default}
+  #   password: ${CLICKHOUSE_PASSWORD:-}
+  #   ttl: 720h # Auto-retention (30 days)
+  #   async_insert: true
+
+  # -------------------------------------------------------------------
+  # 2. SPLUNK (HTTP Event Collector - HEC)
+  # Enterprise logging, ITSI, SIEM security, and APM
+  # -------------------------------------------------------------------
+  # splunk_hec:
+  #   endpoint: "${SPLUNK_HEC_URL:-https://splunk.corp.internal:8088/services/collector}"
+  #   token: "${SPLUNK_HEC_TOKEN}"
+  #   source: "nexus-ecommerce"
+  #   sourcetype: "otel"
+  #   index: "${SPLUNK_INDEX:-ecommerce_telemetry}"
+  #   insecure_skip_verify: true
+
+  # -------------------------------------------------------------------
+  # 3. IBM INSTANA (Enterprise APM & Dynamic Automation)
+  # -------------------------------------------------------------------
+  # instana:
+  #   endpoint: "${INSTANA_ENDPOINT:-https://ingress-red-saas.instana.io}"
+  #   agent_key: "${INSTANA_AGENT_KEY}"
+
+  # -------------------------------------------------------------------
+  # 4. UNIVERSAL OTLP ADAPTER (Any tool supporting OTel Protocol)
+  # Works with Dynatrace, Datadog OTLP, Honeycomb, Elastic, Grafana Cloud
+  # -------------------------------------------------------------------
+  # otlp/any_tool:
+  #   endpoint: "${ANY_TOOL_ENDPOINT:-https://otlp.your-vendor.com:443}"
+  #   headers:
+  #     Authorization: "Bearer ${ANY_TOOL_API_KEY}"
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug] # Add [clickhouse, splunk_hec, instana, otlp/any_tool] here
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug, prometheus] # Add [clickhouse, splunk_hec, instana, otlp/any_tool] here
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug] # Add [clickhouse, splunk_hec, otlp/any_tool] here
